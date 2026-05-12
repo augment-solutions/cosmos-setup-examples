@@ -6,11 +6,11 @@ A script to automatically clone a set of Azure DevOps, Bitbucket or GitLab repos
 
 First, create the necessary access tokens in Azure DevOps/Bitbucket/GitLab and add them as secrets in Cosmos. After this, create the environment, add the necessary environment variables, and run the script.
 
-## Create access token & Cosmos Secret
+### Create access token & Cosmos Secret
 
-An access token is needed to authenticate with Azure DevOps/Bitbucket/GitLab over HTTPS to clone the repositories.
+An access token is needed to authenticate with Azure DevOps/Bitbucket/GitLab over HTTPS to clone the repositories. Follow the instructions below to create an access token in your respective platform, and then add it as a secret in Cosmos.
 
-### Azure Dev Ops: Create access token & `ADO_TOKEN` secret
+#### Azure Dev Ops: Create access token & `ADO_TOKEN` secret
 
 Access tokens can be defined as a [Personal Access Token (PAT)](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate) on the user, or as a [Project](https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate?view=azure-devops&tabs=Windows#create-a-pat-for-a-service-principal-or-managed-identity) scope. Once created, copy the token, as it will be used in the next step when creating the `ADO_TOKEN` secret in Cosmos.
 
@@ -23,7 +23,7 @@ The Pull Request Threads scope is optional, but it's highly recommended to inclu
 
 After creating the token, switch to Cosmos, and go to **Configuration > Secrets > Add Secret > Environment Variable**, and use as Name `ADO_TOKEN` and as Value copy & paste the token, and click **Create Secret**.
 
-### Bitbucket: Create access token & `BITBUCKET_TOKEN` secret
+#### Bitbucket: Create access token & `BITBUCKET_TOKEN` secret
 
 Access tokens can be defined on [Repository](https://support.atlassian.com/bitbucket-cloud/docs/create-a-repository-access-token/), [Project](https://support.atlassian.com/bitbucket-cloud/docs/create-a-project-access-token/), or [Workspace](https://support.atlassian.com/bitbucket-cloud/docs/create-a-workspace-access-token/) level. Once created, copy the token, as it will be used in the next step when creating the `BITBUCKET_TOKEN` secret in Cosmos.
 
@@ -40,7 +40,7 @@ The Pull request scopes are optional, but it's highly recommended to include the
 
 After creating the token, switch to Cosmos, and go to **Configuration > Secrets > Add Secret > Environment Variable**, and use as Name `BITBUCKET_TOKEN` and as Value copy & paste the token, and click **Create Secret**.
 
-### Create GitLab access token & `GITLAB_TOKEN` secret
+#### Create GitLab access token & `GITLAB_TOKEN` secret
 
 It is recommended to use a [Service account](https://docs.gitlab.com/user/profile/service_accounts/) and create an access token for it, rather than using a group or personal access token. This way the token is not tied to a specific user or group.
 
@@ -60,7 +60,7 @@ The `api` scope is optional, but it's highly recommended to include it so that t
 
 After creating the token, switch to Cosmos, and go to **Configuration > Secrets > Add Secret > Environment Variable**, and use as Name `GITLAB_TOKEN` and as Value copy & paste the token, and click **Create Secret**.
 
-## Create environment
+### Create environment
 
 Next, create a custom Cosmos environment that will clone the repositories and keep them up to date.
 
