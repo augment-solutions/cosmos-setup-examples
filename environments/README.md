@@ -66,12 +66,12 @@ Next, create a custom Cosmos environment that will clone the repositories and ke
 
 In Cosmos, go to **Configuration > Environments > Create Environment**, and set the following environment variables:
 
-- `CLONED_REPOS` (in the format `<workspace_a>/<repo_x>,<workspace_b>/<repo_y>)
+- `CLONE_REPOS` (in the format `<workspace_a>/<repo_x>,<workspace_b>/<repo_y>)
 
 Then click **Customize**, and run the following command:
 
    ```bash
-   curl -LsSf https://raw.githubusercontent.com/augment-solutions/cosmos-setup-examples/refs/heads/main/environments/install.sh | sh
+   curl -LsSf https://raw.githubusercontent.com/augment-solutions/cosmos-setup-examples/refs/heads/main/environments/install.sh | bash
    ```
 
 This script will detect which platform token is available (if more than one is set, it will ask you to pick), and clone the repositories defined in `CLONED_REPOS` into `/workspace`.
