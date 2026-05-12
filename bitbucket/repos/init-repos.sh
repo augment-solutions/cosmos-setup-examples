@@ -31,12 +31,14 @@ for entry in "${REPOS[@]}"; do
         continue
     fi
 
-    dest="$TARGET_DIR/$repo"
+    dest="$TARGET_DIR/$workspace/$repo"
 
     if [[ -d "$dest" ]]; then
         echo "Skipping '$entry': destination '$dest' already exists"
         continue
     fi
+
+    mkdir -p "$TARGET_DIR/$workspace"
 
     echo "Cloning $workspace/$repo into $dest"
     git clone "https://x-token-auth:${BITBUCKET_TOKEN}@bitbucket.org/${workspace}/${repo}.git" "$dest"

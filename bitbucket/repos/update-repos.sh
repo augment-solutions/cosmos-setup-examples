@@ -29,7 +29,7 @@ for entry in "${REPOS[@]}"; do
         continue
     fi
 
-    dest="$TARGET_DIR/$repo"
+    dest="$TARGET_DIR/$workspace/$repo"
 
     if [[ ! -d "$dest/.git" ]]; then
         echo "Skipping '$entry': '$dest' is not a git repository" >&2
