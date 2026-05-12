@@ -28,9 +28,10 @@ detect_platform_from_tokens() {
         PLATFORM="${detected[0]}"
     elif [[ ${#detected[@]} -gt 1 ]]; then
         echo "Multiple platform tokens detected: ${detected[*]}"
-        local choice
+        local choice options
+        options="$(IFS='|'; echo "${detected[*]}")"
         while :; do
-            prompt choice "Which platform do you want to use? [${detected[*]}]: "
+            prompt choice "Which platform do you want to use? [${options}]: "
             choice="$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')"
             for p in "${detected[@]}"; do
                 if [[ "$p" == "$choice" ]]; then
@@ -46,7 +47,7 @@ detect_platform_from_tokens() {
 ask_platform() {
     local choice
     while :; do
-        prompt choice "Which platform are you using? [ado/bitbucket/gitlab]: "
+        prompt choice "Which platform are you using? [ado|bitbucket|gitlab]: "
         choice="$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')"
         case "$choice" in
             ado|azure|azuredevops|azure-devops) PLATFORM="ado"; return ;;
