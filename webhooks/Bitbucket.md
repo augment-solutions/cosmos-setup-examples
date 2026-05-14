@@ -1,10 +1,10 @@
 # Bitbucket Webhook Setup
 
-This guide describes how to set up a Bitbucket webhook that delivers events to Cosmos.
+This guide describes how to set up a Bitbucket webhook that delivers events to Cosmos to trigger Experts.
 
 ## 1. Create the Webhook in Cosmos
 
-Create the webhook using the `auggie` CLI:
+Create the webhook using the `auggie` CLI (UI support is coming very soon):
 
 ```bash
 auggie cloud webhook create --type bitbucket --description <webhook_name>
