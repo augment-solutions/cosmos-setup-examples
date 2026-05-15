@@ -44,7 +44,7 @@ Copy the **Webhook URL** and **Secret token** before closing the terminal — th
 1. Go back to your list of GitLab webhooks.
 2. Next to the new webhook, click the **Test** dropdown and select an event (e.g. **Merge request events**).
 3. Confirm GitLab reports a `2xx` response from the Cosmos URL.
-4. Optionally verify the delivery on the Cosmos side via https://app.augmentcode.com/app/webhooks or:
+4. Optionally verify the delivery on the Cosmos side via https://app.augmentcode.com/app/events or:
    ```bash
    auggie cloud webhook list
    ```

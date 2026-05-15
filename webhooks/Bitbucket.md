@@ -90,7 +90,7 @@ For a full list of available events, see the [Bitbucket documentation on Event p
 1. In the webhook list, click **View requests** next to the new webhook (requires **Request History Collection** to be enabled).
 2. Trigger a matching event in the repository (for example, push a commit or open a pull request).
 3. Confirm Bitbucket reports a `2xx` response from the Cosmos URL.
-4. Optionally verify the delivery on the Cosmos side via https://app.augmentcode.com/app/webhooks or:
+4. Optionally verify the delivery on the Cosmos side via https://app.augmentcode.com/app/events or:
    ```bash
    auggie cloud webhook list
    ```
