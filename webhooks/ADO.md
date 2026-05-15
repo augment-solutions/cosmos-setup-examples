@@ -44,9 +44,9 @@ Azure DevOps does not have a native "secret token" field for web hook subscripti
    - **Basic authentication username / password:** leave both empty.
    - **HTTP headers:** add the Bearer token here as a custom header. Enter exactly:
      ```
-     Authorization: Bearer <some_bearer_token>
+     Authorization: Bearer <bearer_token>
      ```
-     Replace `<some_bearer_token>` with the token returned by Cosmos. This is how Cosmos authenticates the incoming request.
+     Replace `<bearer_token>` with the token returned by Cosmos. This is how Cosmos authenticates the incoming request.
    - **Resource details to send / Messages to send / Detailed messages to send:** keep the defaults (**All**).
 6. Click **Test** to send a sample payload to Cosmos and confirm a `2xx` response. Optionally verify the delivery on the Cosmos side via https://app.augmentcode.com/app/events.
 7. Click **Finish** to save the subscription.
