@@ -58,6 +58,8 @@ As an Atlassian admin:
 6. Set **Visibility** to **shared** to make this MCP server and service account reusable by other users.
 7. Click **Add Server**.
 
+![Atlassian MCP Server configuration in Cosmos](./atlassian-mcp.png)
+
 The MCP server should now appear in your MCP registry.
 
 ## 4. Test the Connectivity
