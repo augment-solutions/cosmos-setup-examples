@@ -7,3 +7,4 @@ Examples and helpers for setting up [Augment Cosmos](https://www.augmentcode.com
 - Webhooks:
   - [Bitbucket webhooks](./webhooks/Bitbucket.md): Send Bitbucket events to Cosmos to trigger Experts.
   - [GitLab webhooks](./webhooks/GitLab.md): Send GitLab events to Cosmos to trigger Experts.
+  - [Azure DevOps (ADO) webhooks](./webhooks/ADO.md): Send Azure DevOps events to Cosmos to trigger Experts.
