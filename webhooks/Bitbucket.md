@@ -72,9 +72,8 @@ curl --request POST \
         "pullrequest:updated",
         "pullrequest:approved",
         "pullrequest:changes_request_created",
-        "pullrequest:merged",
-        "pullrequest:declined",
-        "pullrequest:updated",
+        "pullrequest:fulfilled",
+        "pullrequest:rejected",
         "pullrequest:comment_created",
         "pullrequest:comment_updated"
       ]
