@@ -1,0 +1,303 @@
+# Cosmos E2E Video Recording — Reusable GitHub Actions Workflow
+#
+# Records a Playwright E2E test as a video, uploads the recording to a
+# Google Cloud Storage (GCS) bucket, and posts (or updates) a PR comment
+# with an inline preview linked to the full recording.
+#
+# ── Storage note ──
+# This example uses Google Cloud Storage (GCS) with gsutil, but the same
+# pattern works with any S3-compatible object store (AWS S3, MinIO,
+# Backblaze B2, Cloudflare R2, etc.). To adapt:
+#   1. Replace the `google-github-actions/auth` and `setup-gcloud` steps
+#      with your provider's credential setup (e.g., `aws-actions/configure-aws-credentials`).
+#   2. Swap `gsutil cp` commands for your provider's CLI (e.g., `aws s3 cp`).
+#   3. Update the public URL pattern in the upload step outputs.
+#
+# ── Cosmos context ──
+# This workflow is designed to complement Augment Cosmos E2E verification
+# pipelines. Cosmos Experts can trigger this workflow via `workflow_dispatch`
+# and reference the resulting PR comment as QA evidence.
+#
+# ── How to use ──
+# 1. Copy this file into your repo at `.github/workflows/cosmos-video-recording-e2e.yml`
+# 2. Replace all [INSERT_YOUR_...] placeholders with your project-specific values
+# 3. Create a caller workflow (see README.md for examples)
+
+name: Cosmos E2E Video Recording
+
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: "Pull request number to post the video comment on"
+        required: true
+        type: number
+      app_working_directory:
+        description: "Path to the application directory (e.g., 'src' or '.')"
+        required: true
+        type: string
+      app_start_command:
+        description: "Command to start the dev server (e.g., 'npm run dev')"
+        required: false
+        type: string
+        default: "npm run dev"
+      app_url:
+        description: "URL the dev server listens on (e.g., 'http://localhost:3000')"
+        required: false
+        type: string
+        default: "http://localhost:3000"
+      test_working_directory:
+        description: "Path to the E2E test directory (e.g., 'tests/e2e' or '.')"
+        required: false
+        type: string
+        default: "."
+      playwright_config:
+        description: "Playwright config file name (e.g., 'playwright.config.ts')"
+        required: false
+        type: string
+        default: "playwright.config.ts"
+      video_output_directory:
+        description: "Directory where Playwright writes video files (e.g., 'test-results')"
+        required: false
+        type: string
+        default: "test-results"
+      gcs_bucket:
+        description: "GCS bucket name for video uploads (e.g., 'my-project-e2e-artifacts')"
+        required: true
+        type: string
+      gcs_object_prefix:
+        description: "Object path prefix inside the bucket (e.g., 'e2e-videos')"
+        required: false
+        type: string
+        default: "e2e-videos"
+      node_version:
+        description: "Node.js version to use"
+        required: false
+        type: string
+        default: "20"
+      comment_marker:
+        description: "HTML comment marker for idempotent PR comments"
+        required: false
+        type: string
+        default: "<!-- cosmos-e2e-video -->"
+      comment_heading:
+        description: "Heading text for the PR comment"
+        required: false
+        type: string
+        default: "🎬 E2E Recording — verification"
+    secrets:
+      GCS_SA_KEY:
+        description: >
+          Google Cloud service account key (JSON) with write access to the
+          GCS bucket. Store as a GitHub Actions secret.
+        required: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  record-and-upload:
+    name: Playwright E2E (video → GCS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # ── GCS Configuration ──
+      # The bucket must exist and be publicly readable so the
+      # storage.googleapis.com URL renders in the PR comment.
+      #
+      # Recommended bucket settings:
+      #   - IAM: allUsers → roles/storage.objectViewer
+      #   - CORS: allow GET/HEAD from https://github.com (or *)
+      #
+      # One-time setup commands (replace placeholders):
+      #   gsutil mb -p [INSERT_YOUR_GCP_PROJECT_ID] -l [INSERT_YOUR_GCP_REGION] \
+      #     gs://[INSERT_YOUR_STORAGE_BUCKET]
+      #   gsutil iam ch allUsers:objectViewer gs://[INSERT_YOUR_STORAGE_BUCKET]
+      #
+      # ── S3-compatible alternative ──
+      # For AWS S3 / MinIO / R2, replace gsutil commands below with:
+      #   aws s3 cp "$VIDEO_PATH" "s3://${BUCKET}/${OBJECT}" \
+      #     --content-type video/webm --cache-control "public,max-age=3600"
+      # and update the public URL pattern accordingly.
+      GCS_BUCKET: ${{ inputs.gcs_bucket }}
+      APP_URL: ${{ inputs.app_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install application dependencies
+        working-directory: ${{ inputs.app_working_directory }}
+        run: npm ci
+
+      - name: Install E2E test dependencies
+        working-directory: ${{ inputs.test_working_directory }}
+        run: npm ci
+
+      - name: Install Playwright browser
+        working-directory: ${{ inputs.test_working_directory }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Start dev server
+        working-directory: ${{ inputs.app_working_directory }}
+        run: |
+          ${{ inputs.app_start_command }} &
+          echo "DEV_PID=$!" >> "$GITHUB_ENV"
+          for i in $(seq 1 30); do
+            if curl -sSf "$APP_URL" >/dev/null 2>&1; then
+              echo "Dev server is up"; exit 0
+            fi
+            sleep 1
+          done
+          echo "Dev server did not start in time" >&2
+          exit 1
+
+      - name: Run Playwright E2E (records video)
+        working-directory: ${{ inputs.test_working_directory }}
+        env:
+          BASE_URL: ${{ inputs.app_url }}
+        run: npx playwright test --config=${{ inputs.playwright_config }}
+
+      # ── GCS Upload Steps ──
+      # If using a different object store (AWS S3, MinIO, R2, etc.),
+      # replace these two actions with your provider's auth setup.
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCS_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # ── Upload video (and optional preview) to GCS ──
+      # For S3-compatible stores, replace `gsutil cp` with your CLI
+      # (e.g., `aws s3 cp`) and adjust the public URL pattern.
+      - name: Upload video assets to GCS
+        id: upload
+        run: |
+          set -euo pipefail
+          VIDEO_PATH="$(find "${{ inputs.test_working_directory }}/${{ inputs.video_output_directory }}" -name '*.webm' | head -n1)"
+          if [ -z "$VIDEO_PATH" ]; then
+            echo "No recorded video (.webm) found under ${{ inputs.test_working_directory }}/${{ inputs.video_output_directory }}" >&2
+            exit 1
+          fi
+
+          BASE_OBJECT="${{ inputs.gcs_object_prefix }}/pr-${{ inputs.pr_number }}/${{ github.run_id }}/recording"
+          VIDEO_OBJECT="${BASE_OBJECT}.webm"
+          PREVIEW_URL=""
+
+          gsutil \
+            -h "Content-Type:video/webm" \
+            -h "Cache-Control:public,max-age=3600" \
+            cp "$VIDEO_PATH" "gs://${GCS_BUCKET}/${VIDEO_OBJECT}"
+          echo "video_url=https://storage.googleapis.com/${GCS_BUCKET}/${VIDEO_OBJECT}" >> "$GITHUB_OUTPUT"
+
+          # Generate an animated GIF preview (falls back to a static PNG thumbnail)
+          if command -v ffmpeg >/dev/null 2>&1; then
+            GIF_PATH="${RUNNER_TEMP}/recording-preview.gif"
+            if ffmpeg -y -i "$VIDEO_PATH" -vf "fps=8,scale=720:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" -loop 0 "$GIF_PATH" >/dev/null 2>&1 && [ -s "$GIF_PATH" ]; then
+              GIF_OBJECT="${BASE_OBJECT}.gif"
+              gsutil \
+                -h "Content-Type:image/gif" \
+                -h "Cache-Control:public,max-age=3600" \
+                cp "$GIF_PATH" "gs://${GCS_BUCKET}/${GIF_OBJECT}"
+              PREVIEW_URL="https://storage.googleapis.com/${GCS_BUCKET}/${GIF_OBJECT}"
+            else
+              THUMBNAIL_PATH="${RUNNER_TEMP}/recording-preview.png"
+              THUMBNAIL_OBJECT="${BASE_OBJECT}.png"
+              ffmpeg -y -i "$VIDEO_PATH" -vf "thumbnail,scale=960:-1" -frames:v 1 "$THUMBNAIL_PATH" >/dev/null 2>&1 || true
+              if [ -s "$THUMBNAIL_PATH" ]; then
+                gsutil \
+                  -h "Content-Type:image/png" \
+                  -h "Cache-Control:public,max-age=3600" \
+                  cp "$THUMBNAIL_PATH" "gs://${GCS_BUCKET}/${THUMBNAIL_OBJECT}"
+                PREVIEW_URL="https://storage.googleapis.com/${GCS_BUCKET}/${THUMBNAIL_OBJECT}"
+              fi
+            fi
+          fi
+          echo "preview_url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify uploaded video is publicly readable
+        id: verify
+        run: |
+          set -euo pipefail
+          VIDEO_URL='${{ steps.upload.outputs.video_url }}'
+          curl -fsSI "$VIDEO_URL" > /tmp/video-headers.txt
+          grep -iq '^content-type: video/webm' /tmp/video-headers.txt || {
+            cat /tmp/video-headers.txt
+            echo "Uploaded video is not being served as video/webm" >&2
+            exit 1
+          }
+          echo "public_read_status=verified" >> "$GITHUB_OUTPUT"
+          echo "::notice::For inline GitHub playback, keep bucket/object public-read and allow GET/HEAD CORS from https://github.com or *."
+
+      - name: Comment on PR with inline video
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ inputs.pr_number }};
+            const videoUrl = '${{ steps.upload.outputs.video_url }}';
+            const previewUrl = '${{ steps.upload.outputs.preview_url }}';
+            const marker = '${{ inputs.comment_marker }}';
+            const heading = '${{ inputs.comment_heading }}';
+            const previewBlock = [];
+            if (previewUrl) {
+              previewBlock.push(
+                `<a href="${videoUrl}"><img src="${previewUrl}" alt="E2E recording preview" width="640" /></a>`,
+                '',
+                'GitHub does not reliably inline externally hosted video players in PR comments, so this comment shows an inline preview that opens the full recording.'
+              );
+            } else {
+              previewBlock.push('Open the recorded video directly: ' + videoUrl);
+            }
+
+            const playbackChecks = [
+              '- Inline PR preview: animated preview image linked to the full recording',
+              '- Full recording: public `storage.googleapis.com` WebM URL',
+              '- Public object access: verified by anonymous `HEAD` request',
+              '- GitHub-native comment attachments can render inline as video, but external bucket-hosted recordings need a linked preview instead',
+            ];
+
+            const body = [
+              marker,
+              `### ${heading}`,
+              '',
+              ...previewBlock,
+              '',
+              'Playback checks:',
+              ...playbackChecks,
+              '',
+              `<sub>Recorded by the Cosmos E2E workflow on \`${context.sha.substring(0, 7)}\` · run ${context.runId}</sub>`,
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body,
+              });
+            }
+
+      - name: Stop dev server
+        if: always()
+        run: '[ -n "${DEV_PID:-}" ] && kill "$DEV_PID" || true'
