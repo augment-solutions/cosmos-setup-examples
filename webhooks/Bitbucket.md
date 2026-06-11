@@ -4,28 +4,11 @@ This guide describes how to set up a Bitbucket webhook that delivers events to C
 
 ## 1. Create the Webhook in Cosmos
 
-Create the webhook using the `auggie` CLI (UI support is coming very soon):
+In Cosmos, go to [Webhooks](https://cosmos.augmentcode.com/webhooks) and click **Create webhook**.
 
-```bash
-auggie cloud webhook create --type bitbucket --description <webhook_name>
-```
+Enter a description, select **Jira** as the Type and click **Continue**.
 
-The command returns the webhook details, for example:
-
-```
-Created webhook: <some_uuid>
-Type: bitbucket
-URL: https://augmentdemo.api.augmentcode.com/webhooks/<some_uuid>
-Secret: <some_secret>
-Save this secret now. It cannot be retrieved again.
-Setup fields:
-Webhook URL: https://augmentdemo.api.augmentcode.com/webhooks/<some_uuid>
-Signing secret: <secret>
-Content type: application/json
-Authentication header: X-Hub-Signature: sha256=<hex HMAC>
-```
-
-Copy the **Webhook URL** and **Signing secret** before closing the terminal — the secret cannot be retrieved again.
+Copy the **Webhook URL** and **Signing secret** before leaving the page — the secret cannot be retrieved again.
 
 ## 2. Add the Webhook in Bitbucket
 
@@ -53,13 +36,13 @@ In Bitbucket Cloud, webhooks are configured per repository or at the workspace l
 
 Presently, it is not possible to create Webhooks on the workspace level using the Bitbucket Cloud UI. The UI option is currently only available on the repository level.
 
-To create Webhooks on the workspace level, utilize the Bitbucket Cloud REST API as followed:
+To create Webhooks on the workspace level, utilize the Bitbucket Cloud REST API as followed. Make sure to replace the workspace, description, webhook URL, and secret placeholders with their actual values:
 
 ```bash
 curl --request POST \
   --url 'https://api.bitbucket.org/2.0/workspaces/{workspace}/hooks' \
   --header 'Authorization: Bearer <access_token>' \
-  --header 'Accept: application/json'
+  --header 'Accept: application/json' \
   -d '
     {
       "description": "<webhook_name>",
@@ -80,7 +63,7 @@ curl --request POST \
     }'
 ```
 
-Note that you need to create an access token in Bitbucket Cloud to authenticate with the API. The token needs to have `read:webhook:bitbucket` & `write:webhook:bitbucket` scope. For instructions on how to create an access token in Bitbucket, see https://github.com/augment-solutions/cosmos-setup-examples/tree/main/environments.
+Note that you need to create an access token in Bitbucket Cloud to authenticate with the API. The token needs to have `repository`, & `pullrequest` & `webhook` scope. For instructions on how to create an access token in Bitbucket, see https://github.com/augment-solutions/cosmos-setup-examples/tree/main/environments.
 
 For a full list of available events, see the [Bitbucket documentation on Event payloads](https://support.atlassian.com/bitbucket-cloud/docs/event-payloads). And see also [Bitbucket documentation on How to create workspace-level Webhooks](https://support.atlassian.com/bitbucket-cloud/kb/how-to-create-workspace-level-webhooks/) and [Bitbucket documentation on Create a webhook for a workspace](https://developer.atlassian.com/cloud/bitbucket/rest/api-group-workspaces/#api-workspaces-workspace-hooks-post).
 
